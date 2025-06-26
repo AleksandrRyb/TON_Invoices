@@ -1,0 +1,10 @@
+CREATE USER whale WITH PASSWORD 'whale_pass';
+CREATE DATABASE whale_db;
+GRANT ALL PRIVILEGES ON DATABASE whale_db TO whale;
+ALTER USER whale CREATEDB;
+
+\connect whale_db;
+
+ALTER SCHEMA public OWNER TO whale;
+GRANT ALL ON SCHEMA public TO whale;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO whale;

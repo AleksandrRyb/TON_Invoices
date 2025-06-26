@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: whale_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: whale_pass
+    volumes:
+      - type: bind
+        source: ./postgres/init-scripts
+        target: /docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whale -d whale_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whale_backend
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    expose: 
+      - "3000"
+    ports:
+      - "3000:3000"
+
+  redis:
+    image: redis:7
+    container_name: whale_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    expose:
+      - "6379"
