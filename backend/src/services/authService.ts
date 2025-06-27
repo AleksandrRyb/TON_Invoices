@@ -1,8 +1,9 @@
 import { getSecureRandomBytes } from '@ton/crypto';
 import { signVerify } from '@ton/crypto';
 import Redis from 'ioredis';
+import { env } from '@config/env';
 
-const redis = new Redis(process.env.REDIS_URL!);
+const redis = new Redis(env.REDIS_URL);
 const CHALLENGE_TTL = 5 * 60; // 5 минут в секундах
 
 export async function generateChallenge(address: string) {
