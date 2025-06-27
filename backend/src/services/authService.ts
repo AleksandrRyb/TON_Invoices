@@ -13,7 +13,7 @@ export async function generateChallenge(address: string) {
   const challenge = {
     address,
     payload,
-    domain: process.env.AUTH_DOMAIN || 'whale.local',
+    domain: 'whale.local',
     timestamp: Date.now(),
   };
   // Сохраняем challenge в Redis с TTL
