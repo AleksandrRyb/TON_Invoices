@@ -1,4 +1,6 @@
 import { PrismaClient, Invoice } from '@generated/prisma';
+import { InvoiceStatus } from '@constants/invoice';
+import { Asset } from '@constants/asset';
 
 const prisma = new PrismaClient();
 
@@ -12,16 +14,21 @@ export const getInvoiceById = async (id: string): Promise<Invoice | null> => {
 
 export const createInvoice = async (data: {
   amount: string;
-  asset: string;
-  status: string;
   userId: string;
   expiresAt?: Date;
-  txHash?: string;
 }): Promise<Invoice> => {
-  return prisma.invoice.create({ data });
+  return prisma.invoice.create({
+    data: {
+      amount: data.amount,
+      userId: data.userId,
+      expiresAt: data.expiresAt,
+      asset: Asset.TON,
+      status: InvoiceStatus.PENDING,
+    },
+  });
 };
 
-export const updateInvoiceStatus = async (id: string, status: string): Promise<Invoice> => {
+export const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Promise<Invoice> => {
   return prisma.invoice.update({ where: { id }, data: { status } });
 };
 
