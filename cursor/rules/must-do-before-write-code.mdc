@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Before doing anything you have to analize files [README.md](mdc:backend/README.md) and [README.md](mdc:frontend/README.md) to check what we've already did. To understand what modules we have and what purposes we follow. Also i wrtie [PROGRESS_LOG.md](mdc:backend/PROGRESS_LOG.md) in backend to write what we done in fact. The same file will be in frontend folder
+
+
+At initial prompt in cursor chat you have to scan project structure and related files to undertand to write code. You probably do not have to always scan every file but you have to know what utils and configs we use, and what db structures we use.
+
+Also if you don't cleary understand the task you have to ask specific question for make it clear. 
+
