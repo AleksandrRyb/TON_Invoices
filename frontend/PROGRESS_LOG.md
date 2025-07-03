@@ -17,4 +17,12 @@ This document tracks the major development milestones and tasks completed.
 - **Backend Port Change**: Modified the backend service to run on port `3001` to avoid conflicts with the frontend development server.
 - **Frontend Dockerfile**: Created a `Dockerfile` for the frontend service to ensure a consistent and reproducible containerized environment.
 - **Docker Compose Update**: Added the frontend service to the `docker-compose.yaml` file, enabling it to run alongside the backend and other services.
-- **Hot-Reloading**: Configured a volume in `docker-compose.yaml` to mount the local `frontend` source code into the container, allowing for hot-reloading on code changes. 
+- **Hot-Reloading**: Configured a volume in `docker-compose.yaml` to mount the local `frontend` source code into the container, allowing for hot-reloading on code changes.
+
+## Authentication & Dynamic Configuration (Completed)
+
+- **Implemented `ton_proof` Flow**: Created `AuthContext` to manage the full user authentication cycle: fetching a challenge, requesting proof from the wallet, and verifying it with the backend.
+- **Dynamic Manifest URL**: Replaced the static `public/tonconnect-manifest.json` with a dynamic API route (`/tonconnect-manifest.json/route.ts`).
+- **Environment Variable for URL**: Introduced a `NEXT_PUBLIC_FRONTEND_URL` environment variable to dynamically configure the application's public URL, which is used by both the `TonConnectUIProvider` and the dynamic manifest. This simplifies using `ngrok` for development and prepares for production deployment.
+- **Ngrok & Proxy Setup**: Used `ngrok` to expose the local development server and configured a Next.js proxy to correctly route API requests to the backend container, solving wallet connectivity issues.
+- **Address Formatting**: Ensured the user's address is displayed and handled consistently in the user-friendly format. 
