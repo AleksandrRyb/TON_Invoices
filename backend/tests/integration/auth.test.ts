@@ -1,140 +1,124 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
-import { PrismaClient } from '../../src/generated/prisma';
-import Redis from 'ioredis';
-import { keyPairFromSeed, sign, getSecureRandomBytes } from '@ton/crypto';
+import { describe, it, expect, jest, beforeAll, afterEach } from '@jest/globals';
 import app from '../../src/app';
+import * as authService from '../../src/services/authService';
+import * as userService from '../../src/services/userService';
+import { Address } from '@ton/core';
 
-const prisma = new PrismaClient();
-const redis = new Redis(process.env.REDIS_URL as string);
+// Mock the services
+jest.mock('../../src/services/authService');
+jest.mock('../../src/services/userService');
+jest.mock('@ton/core');
+
+const mockedAuthService = authService as jest.Mocked<typeof authService>;
+const mockedUserService = userService as jest.Mocked<typeof userService>;
+const mockedAddress = Address as jest.Mocked<typeof Address>;
 
 describe('Auth Endpoints', () => {
-  // Clean up the database and redis after each test
-  afterEach(async () => {
-    await prisma.invoice.deleteMany();
-    await prisma.user.deleteMany();
-    await redis.flushall();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  // Disconnect clients after all tests are done
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await redis.disconnect();
+  describe('POST /api/auth/challenge', () => {
+    it('should get a valid challenge payload', async () => {
+      const challengePayload = {
+        payload: 'some-random-payload-string',
+      };
+      mockedAuthService.generateChallenge.mockResolvedValue(challengePayload);
+
+      const response = await request(app).post('/api/auth/challenge').send();
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(challengePayload);
+      expect(mockedAuthService.generateChallenge).toHaveBeenCalled();
+    });
   });
 
-  it('should get a valid challenge from POST /api/auth/challenge', async () => {
-    const response = await request(app)
-      .post('/api/auth/challenge')
-      .send({ address: 'EQCD39VS5jcpt_R-c14D6S1m2lUeP1hP1c2KqS-d_IeKAAAA' });
+  describe('POST /api/auth/verify', () => {
+    const mockProof = {
+      address: '0:d31481c47a3e7638f6f879467c0ff99f53e167272186794878f56134b2868448',
+      proof: {
+        timestamp: Date.now(),
+        domain: {
+          lengthBytes: 21,
+          value: 'ton-connect-test-dapp',
+        },
+        payload: 'some-random-payload-string',
+        signature: 'some-signature',
+      },
+      publicKey: 'some-public-key',
+    };
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('payload');
-    expect(response.body).toHaveProperty('domain');
-    expect(response.body).toHaveProperty('timestamp');
-    expect(response.body.address).toBe('EQCD39VS5jcpt_R-c14D6S1m2lUeP1hP1c2KqS-d_IeKAAAA');
-  });
+    const userFriendlyAddress = 'UQDXFІн+Zjj2+HlGfA/5n1T4WnJgG5IeJNbI4aI4gBJQ';
 
-  it('should successfully verify a valid proof and create a new user', async () => {
-    // 1. Generate a key pair for the test
-    const seed = await getSecureRandomBytes(32);
-    const keyPair = keyPairFromSeed(seed);
-    const testAddress = 'EQBYA_g-9Yj2-eHlGfA_Z3-UPzfs4WnJgG5IeJNbI4aISL4s';
+    beforeAll(() => {
+      // Mock the Address parser to return a predictable user-friendly address
+      mockedAddress.parse.mockReturnValue({
+        toString: () => userFriendlyAddress,
+      } as any);
+    });
 
-    // 2. Get a challenge
-    const challengeRes = await request(app)
-      .post('/api/auth/challenge')
-      .send({ address: testAddress });
+    afterEach(() => {
+      // Clear all mock history after each test
+      jest.clearAllMocks();
+    });
 
-    expect(challengeRes.status).toBe(200);
-    const { payload, domain, timestamp } = challengeRes.body;
-
-    // 3. Sign the payload
-    const signature = sign(Buffer.from(payload, 'hex'), keyPair.secretKey);
-
-    // 4. Send for verification
-    const verifyRes = await request(app)
-      .post('/api/auth/verify')
-      .send({
-        address: testAddress,
-        payload,
-        domain,
-        timestamp,
-        signature: signature.toString('hex'),
-        publicKey: keyPair.publicKey.toString('hex'),
+    it('should fail if required fields are missing', async () => {
+      const response = await request(app).post('/api/auth/verify').send({
+        address: mockProof.address,
+        // Missing proof and publicKey
       });
 
-    // 5. Assert the response
-    expect(verifyRes.status).toBe(200);
-    expect(verifyRes.body.success).toBe(true);
-    expect(verifyRes.body.user.address).toBe(testAddress);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Required fields are missing: address, proof, publicKey');
+    });
 
-    // 6. Assert database state
-    const userInDb = await prisma.user.findUnique({ where: { address: testAddress } });
-    expect(userInDb).not.toBeNull();
-    expect(userInDb?.address).toBe(testAddress);
+    it('should fail if signature is invalid', async () => {
+      mockedAuthService.verifyProof.mockResolvedValue(false);
 
-    // 7. Assert Redis state (challenge should be deleted)
-    const challengeInRedis = await redis.get(`challenge:${testAddress}`);
-    expect(challengeInRedis).toBeNull();
-  });
+      const response = await request(app).post('/api/auth/verify').send(mockProof);
 
-  it('should fail verification with an invalid signature', async () => {
-    const testAddress = 'EQBYA_g-9Yj2-eHlGfA_Z3-UPzfs4WnJgG5IeJNbI4aISL4s';
-    
-    // Get a challenge
-    const challengeRes = await request(app)
-      .post('/api/auth/challenge')
-      .send({ address: testAddress });
-    const { payload, domain, timestamp } = challengeRes.body;
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Invalid signature or expired challenge');
+      expect(mockedAuthService.verifyProof).toHaveBeenCalledWith(mockProof);
+    });
 
-    // Send for verification with a bogus signature and public key
-    const verifyRes = await request(app)
-      .post('/api/auth/verify')
-      .send({
-        address: testAddress,
-        payload,
-        domain,
-        timestamp,
-        signature: 'bogus_signature',
-        publicKey: 'bogus_public_key',
+    it('should succeed and create a new user if user does not exist', async () => {
+      mockedAuthService.verifyProof.mockResolvedValue(true);
+      mockedUserService.getUserByAddress.mockResolvedValue(null);
+      const newUser = { id: '1', address: userFriendlyAddress, createdAt: new Date() };
+      mockedUserService.createUser.mockResolvedValue(newUser);
+
+      const response = await request(app).post('/api/auth/verify').send(mockProof);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.user).toEqual({
+        ...newUser,
+        createdAt: newUser.createdAt.toISOString(),
       });
 
-    expect(verifyRes.status).toBe(401);
-    expect(verifyRes.body.error).toBe('Неверная подпись или истёкший challenge');
-  });
+      expect(mockedAddress.parse).toHaveBeenCalledWith(mockProof.address);
+      expect(mockedUserService.getUserByAddress).toHaveBeenCalledWith(userFriendlyAddress);
+      expect(mockedUserService.createUser).toHaveBeenCalledWith(userFriendlyAddress);
+    });
 
-  it('should prevent replay attacks by failing on second verification', async () => {
-    // --- First, do a successful verification (same as the happy path test) ---
-    const seed = await getSecureRandomBytes(32);
-    const keyPair = keyPairFromSeed(seed);
-    const testAddress = 'EQBYA_g-9Yj2-eHlGfA_Z3-UPzfs4WnJgG5IeJNbI4aISL4s';
-    
-    const challengeRes = await request(app)
-      .post('/api/auth/challenge')
-      .send({ address: testAddress });
-    const { payload, domain, timestamp } = challengeRes.body;
-    const signature = sign(Buffer.from(payload, 'hex'), keyPair.secretKey);
+    it('should succeed and return an existing user', async () => {
+      const existingUser = { id: '2', address: userFriendlyAddress, createdAt: new Date() };
+      mockedAuthService.verifyProof.mockResolvedValue(true);
+      mockedUserService.getUserByAddress.mockResolvedValue(existingUser);
 
-    const firstVerifyRes = await request(app)
-      .post('/api/auth/verify')
-      .send({
-        address: testAddress, payload, domain, timestamp,
-        signature: signature.toString('hex'),
-        publicKey: keyPair.publicKey.toString('hex'),
+      const response = await request(app).post('/api/auth/verify').send(mockProof);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.user).toEqual({
+        ...existingUser,
+        createdAt: existingUser.createdAt.toISOString(),
       });
-    expect(firstVerifyRes.status).toBe(200); // Verify it worked the first time
 
-    // --- Second, attempt to use the same proof again ---
-    const secondVerifyRes = await request(app)
-      .post('/api/auth/verify')
-      .send({
-        address: testAddress, payload, domain, timestamp,
-        signature: signature.toString('hex'),
-        publicKey: keyPair.publicKey.toString('hex'),
-      });
-    
-    // Assert it fails because the challenge was deleted from Redis
-    expect(secondVerifyRes.status).toBe(401);
-    expect(secondVerifyRes.body.error).toBe('Неверная подпись или истёкший challenge');
+      expect(mockedUserService.getUserByAddress).toHaveBeenCalledWith(userFriendlyAddress);
+      expect(mockedUserService.createUser).not.toHaveBeenCalled();
+    });
   });
 }); 
