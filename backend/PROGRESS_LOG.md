@@ -1,84 +1,84 @@
-# Прогресс разработки backend
+# Backend Development Progress Log
 
-## Этап 1: Настройка проекта и окружения
+## Stage 1: Project and Environment Setup
 
-- [x] Инициализирован npm-проект (`npm init -y`)
-- [x] Установлены основные зависимости: express, cors, dotenv, pino
-- [x] Установлены dev-зависимости: typescript, @types/node, @types/express, @types/cors, ts-node-dev, pino-pretty
-- [x] Создан и настроен tsconfig.json
-- [x] Создана структура папок: src, src/api/routes, src/api/controllers, src/services, src/config, src/ws
-- [x] Создан базовый Express-приложение (app.ts)
-- [x] Создан файл точки входа (server.ts)
-- [x] Добавлены скрипты dev, build, start в package.json
-- [x] Создан .gitignore
-- [x] Создан .env (PORT=8000)
-- [x] Сервер успешно запущен командой `npm run dev`
-- [x] Создан Dockerfile для backend
-- [x] Добавлен сервис backend в docker-compose.yaml
-- [x] Исправлен init-скрипт whale.sql: теперь схема public принадлежит пользователю whale, выданы все необходимые права
-- [x] Пересоздан volume базы данных и повторно применён init-скрипт
-
----
-
-## Этап 2: Настройка базы данных с Prisma
-
-- [x] Запущен сервис PostgreSQL через docker-compose
-- [x] Установлены зависимости Prisma: prisma, @prisma/client
-- [x] Инициализирована Prisma (`npx prisma init`)
-- [x] Добавлен DATABASE_URL в .env
-- [x] Описана схема данных в prisma/schema.prisma (User, Invoice)
-- [x] Применена миграция и сгенерирован Prisma Client (`npx prisma migrate dev --name init`)
+- [x] Initialized npm project (`npm init -y`)
+- [x] Installed core dependencies: express, cors, dotenv, pino
+- [x] Installed dev dependencies: typescript, @types/node, @types/express, @types/cors, ts-node-dev, pino-pretty
+- [x] Created and configured tsconfig.json
+- [x] Created folder structure: src, src/api/routes, src/api/controllers, src/services, src/config, src/ws
+- [x] Created a basic Express application (app.ts)
+- [x] Created the entry point file (server.ts)
+- [x] Added dev, build, start scripts to package.json
+- [x] Created .gitignore
+- [x] Created .env (PORT=8000)
+- [x] Server successfully started with `npm run dev`
+- [x] Created Dockerfile for the backend
+- [x] Added backend service to docker-compose.yaml
+- [x] Fixed the whale.sql init script: the public schema now belongs to the 'whale' user, and all necessary privileges have been granted
+- [x] Recreated the database volume and reapplied the init script
 
 ---
 
-## Этап 3: Реализация CRUD API
+## Stage 2: Database Setup with Prisma
 
-- [x] Созданы сервисы для User и Invoice (src/services)
-- [x] Созданы контроллеры для User и Invoice (src/api/controllers)
-- [x] Созданы роуты для User и Invoice (src/api/routes)
-- [x] Подключены роуты в app.ts
-- [ ] (Опционально) Добавить тесты и документацию
-
----
-
-## Этап 3 (продолжение): Аутентификация и Тестирование
-
-- [x] Настроены TypeScript path-алиасы для абсолютных импортов.
-- [x] Установлен `tsconfig-paths` для поддержки алиасов в `ts-node-dev`.
-- [x] Установлены `@ton/crypto` и `ioredis` для реализации `ton_proof`.
-- [x] Добавлен сервис `Redis` в `docker-compose.yml`.
-- [x] Реализован `AuthService` с генерацией и верификацией challenge через Redis (с TTL и защитой от replay-атак).
-- [x] Реализованы роуты `POST /api/auth/challenge` и `POST /api/auth/verify`.
-- [x] Исправлена проблема Prisma с `binaryTargets` для корректной работы в Docker.
-- [x] Настроена автоматическая миграция Prisma (`migrate deploy`) при старте сервера в `docker-compose`.
-- [x] Настроено тестовое окружение: `Jest`, `Supertest`, `ts-jest`.
-- [x] Создан `docker-compose.test.yml` для изолированных тестов.
-- [x] Реализованы скрипты `globalSetup` и `globalTeardown` для управления тестовой средой (запуск Docker, миграции, очистка).
-- [x] Написаны полноценные интеграционные тесты для всего потока аутентификации.
-- [x] Исправлена проблема с "зависанием" Jest после тестов (`--forceExit`).
+- [x] Started PostgreSQL service via docker-compose
+- [x] Installed Prisma dependencies: prisma, @prisma/client
+- [x] Initialized Prisma (`npx prisma init`)
+- [x] Added DATABASE_URL to .env
+- [x] Described the data schema in prisma/schema.prisma (User, Invoice)
+- [x] Applied migration and generated Prisma Client (`npx prisma migrate dev --name init`)
 
 ---
 
-## Этап 4: Реализация основного платежного потока и Тестирование
+## Stage 3: CRUD API Implementation
 
-- [x] Установлен пакет `envalid` для валидации переменных окружения и создан `src/config/env.ts`.
-- [x] В `invoiceService` создание счета теперь автоматически устанавливает статус `pending` и валюту `TON`, используя константы.
-- [x] Реализован роут `POST /api/invoices`, который создает счет и возвращает `invoiceId`, `amount` и статический `recipientWalletAddress`.
-- [x] Роут `GET /api/invoices/:id` для получения статуса счета был проверен и работает корректно.
-- [x] Добавлены интеграционные тесты для эндпоинтов счетов (`invoice.test.ts`):
-  - [x] Тест на успешное создание счета.
-  - [x] Тесты на ошибки (несуществующий пользователь, отсутствующие данные).
-  - [x] Тест на успешное получение статуса счета.
-  - [x] Тест на получение несуществующего счета (404).
-- [x] Для стабильности тестов модуль конфигурации был замокан с помощью `jest.mock`.
+- [x] Created services for User and Invoice (src/services)
+- [x] Created controllers for User and Invoice (src/api/controllers)
+- [x] Created routes for User and Invoice (src/api/routes)
+- [x] Connected routes in app.ts
+- [ ] (Optional) Add tests and documentation
 
 ---
 
-## Этап 3 (Рефакторинг): Улучшение Аутентификации и Тестов
+## Stage 3 (Continued): Authentication and Testing
 
-- [x] **Переработан `AuthService`**: Логика верификации `ton_proof` была полностью переписана для строгого соответствия официальной документации, что исправило критическую ошибку "Invalid signature".
-- [x] **Обновлены зависимости**: Добавлены `@ton/core`, `js-sha256`, `@tonconnect/sdk` для корректной сборки и проверки криптографических сообщений.
-- [x] **Формат адреса**: Адрес пользователя теперь конвертируется в user-friendly формат перед сохранением в базу данных.
-- [x] **Переписаны тесты аутентификации**: Интеграционные тесты для `auth.test.ts` были полностью переработаны:
-  - [x] Вместо прямого взаимодействия с сервисами, теперь используется мокинг (`jest.mock`) для изоляции логики контроллеров.
-  - [x] Исправлены ошибки типизации и сериализации данных (`Date` в JSON), что стабилизировало тестовый набор.
+- [x] Configured TypeScript path aliases for absolute imports.
+- [x] Installed `tsconfig-paths` to support aliases in `ts-node-dev`.
+- [x] Installed `@ton/crypto` and `ioredis` to implement `ton_proof`.
+- [x] Added Redis service to `docker-compose.yml`.
+- [x] Implemented `AuthService` with challenge generation and verification via Redis (with TTL and replay-attack protection).
+- [x] Implemented `POST /api/auth/challenge` and `POST /api/auth/verify` routes.
+- [x] Fixed Prisma issue with `binaryTargets` for correct operation in Docker.
+- [x] Configured automatic Prisma migration (`migrate deploy`) on server start in `docker-compose`.
+- [x] Set up the test environment: `Jest`, `Supertest`, `ts-jest`.
+- [x] Created `docker-compose.test.yml` for isolated tests.
+- [x] Implemented `globalSetup` and `globalTeardown` scripts for managing the test environment (starting Docker, migrations, cleanup).
+- [x] Wrote comprehensive integration tests for the entire authentication flow.
+- [x] Fixed the issue with Jest "hanging" after tests (`--forceExit`).
+
+---
+
+## Stage 4: Main Payment Flow Implementation and Testing
+
+- [x] Installed the `envalid` package for environment variable validation and created `src/config/env.ts`.
+- [x] In `invoiceService`, invoice creation now automatically sets the status to `pending` and currency to `TON`, using constants.
+- [x] Implemented the `POST /api/invoices` route, which creates an invoice and returns `invoiceId`, `amount`, and a static `recipientWalletAddress`.
+- [x] The `GET /api/invoices/:id` route for getting invoice status was checked and works correctly.
+- [x] Added integration tests for invoice endpoints (`invoice.test.ts`):
+  - [x] Test for successful invoice creation.
+  - [x] Tests for errors (non-existent user, missing data).
+  - [x] Test for successfully getting invoice status.
+  - [x] Test for getting a non-existent invoice (404).
+- [x] For test stability, the configuration module was mocked using `jest.mock`.
+
+---
+
+## Stage 3 (Refactoring): Authentication and Test Improvements
+
+- [x] **Reworked `AuthService`**: The `ton_proof` verification logic was completely rewritten for strict compliance with the official documentation, which fixed a critical "Invalid signature" error.
+- [x] **Updated Dependencies**: Added `@ton/core`, `js-sha256`, `@tonconnect/sdk` for correct building and verification of cryptographic messages.
+- [x] **Address Format**: The user's address is now converted to a user-friendly format before being saved to the database.
+- [x] **Rewrote Authentication Tests**: Integration tests for `auth.test.ts` were completely redesigned:
+  - [x] Instead of direct interaction with services, mocking (`jest.mock`) is now used to isolate controller logic.
+  - [x] Fixed typing and data serialization errors (`Date` in JSON), which stabilized the test suite.
