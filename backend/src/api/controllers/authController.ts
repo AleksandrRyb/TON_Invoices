@@ -24,7 +24,7 @@ export const postVerify = async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Invalid signature or expired challenge' });
   }
 
-  const userFriendlyAddress = Address.parse(rawAddress).toString();
+  const userFriendlyAddress = Address.parse(rawAddress).toString({ bounceable: false });
 
   let user = await userService.getUserByAddress(userFriendlyAddress);
   if (!user) {
