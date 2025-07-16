@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { useTonConnectUI, ConnectedWallet } from '@tonconnect/ui-react';
+import { useTonConnectUI, ConnectedWallet, useTonAddress } from '@tonconnect/ui-react';
 import apiClient from '@/api';
 
 interface AuthContextType {
@@ -15,6 +15,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [tonConnectUI] = useTonConnectUI();
   const [address, setAddress] = useState<string | null>(null);
   const isAuthenticated = !!address;
+  const userFriendlyAddress = useTonAddress();
+  
+
+  // This effect handles the initial authentication state and session restoration.
+  useEffect(() => {
+    // 1. Listen for the connection to be restored.
+    tonConnectUI.connectionRestored.then(restored => {
+      // 2. If restored and we have an address from the wallet, but not in our state, set it.
+      if (restored && userFriendlyAddress && !address) {
+        setAddress(userFriendlyAddress);
+      }
+    });
+
+    // 3. Handle status changes (e.g., user connects/disconnects).
+    const unsubscribe = tonConnectUI.onStatusChange(
+      (newWallet: ConnectedWallet | null) => {
+        if (newWallet) {
+          // If a new wallet connects with a proof, verify it.
+          if (newWallet.connectItems?.tonProof) {
+            verifyProof(newWallet);
+          } else {
+            // Otherwise, just set the address. This covers re-connection without a new proof.
+            setAddress(newWallet.account.address);
+          }
+        } else {
+          // If disconnected, clear the address.
+          setAddress(null);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userFriendlyAddress]);
+
+  console.log("TonConnectUI", tonConnectUI);
 
   // This function sends the wallet's proof to the backend for verification
   const verifyProof = useCallback(async (wallet: ConnectedWallet) => {
@@ -24,9 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!tonProof || !('proof' in tonProof)) {
         throw new Error('TON Proof not found in wallet connection items');
       }
-
-      console.log(wallet.account.publicKey);
-      console.log(wallet.account.address);
 
       const { data: verifyData } = await apiClient.post('/auth/verify', {
         address: wallet.account.address,
@@ -47,20 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [tonConnectUI]);
   
-  // Listen for wallet status changes to either verify a new proof or clear the session
-  useEffect(() => {
-    const unsubscribe = tonConnectUI.onStatusChange(
-      (newWallet: ConnectedWallet | null) => {
-        if (newWallet && newWallet.connectItems?.tonProof) {
-          verifyProof(newWallet);
-        } else {
-          setAddress(null); // Clear auth state on disconnect or if proof is missing
-        }
-      }
-    );
-    return () => unsubscribe();
-  }, [tonConnectUI, verifyProof]);
-
   // Set the proof request payload when the auth modal is opened
   useEffect(() => {
     const setProofRequestPayload = async () => {
