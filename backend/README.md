@@ -1,92 +1,92 @@
-# План разработки Backend-сервиса "Mini-Holders"
+# TON Verifiable Invoices - Backend Service
 
-Этот документ содержит пошаговый план и чек-лист для создания бэкенд-части приложения.
+This document contains a step-by-step plan and checklist for creating the backend part of the application.
 
-## 1. Общая архитектура и принцип работы
+## 1. Architecture and Operating Principle
 
-Система состоит из трех ключевых компонентов:
+The system consists of three key components:
 
-1. **Клиент (Frontend)**: Взаимодействует с пользователем и его некостодиальным кошельком (например, Tonkeeper) через протокол TON Connect.
-2. **Бэкенд (Backend)**: Наш Express.js сервер. Он не имеет доступа к ключам пользователя и не инициирует транзакции. Его главные задачи — **выдавать задания** клиенту и **верифицировать** их выполнение путем прямого обращения к блокчейну.
-3. **Блокчейн TON**: Единственный источник правды. Все проверки на бэкенде основываются на данных, полученных напрямую из блокчейна.
+1.  **Client (Frontend)**: Interacts with the user and their non-custodial wallet (e.g., Tonkeeper) via the TON Connect protocol.
+2.  **Backend (This Service)**: An Express.js server. It does not have access to user keys and does not initiate transactions. Its main tasks are to **issue tasks** to the client and **verify** their execution by directly querying the blockchain.
+3.  **TON Blockchain**: The single source of truth. All backend checks are based on data obtained directly from the blockchain.
 
-### Принцип работы: "Не доверяй, а проверяй"
+### Principle: "Don't Trust, Verify"
 
-- **Аутентификация**: Бэкенд генерирует случайное сообщение (`payload`), фронтенд просит кошелек его подписать (`ton_proof`), а бэкенд затем проверяет эту подпись. Это доказывает, что пользователь владеет кошельком.
-- **Оплата**: Бэкенд сообщает фронтенду **что** и **куда** перевести. Фронтенд просит кошелек выполнить эту транзакцию. Бэкенд самостоятельно находит эту транзакцию в блокчейне и проверяет все ее параметры (сумма, получатель, комментарий).
+- **Authentication**: The backend generates a random message (`payload`), the frontend asks the wallet to sign it (`ton_proof`), and the backend then verifies this signature. This proves that the user owns the wallet.
+- **Payment**: The backend tells the frontend **what** and **where** to transfer funds. The frontend asks the wallet to execute this transaction. The backend independently finds this transaction on the blockchain and verifies all its parameters (amount, recipient, comment).
 
 ---
 
-## 2. Чек-лист разработки
+## 2. Development Checklist
 
-### ☐ Этап 1: Настройка проекта и окружения
+### ☐ Stage 1: Project and Environment Setup
 
-- [x] Инициализировать `npm` проект (`npm init`).
-- [x] Установить и настроить **TypeScript** (`tsconfig.json`).
-- [x] Установить основные зависимости: `express`, `cors`, `dotenv`, `pino`.
-- [x] Установить dev-зависимости: `@types/node`, `@types/express`, `ts-node-dev`, `pino-pretty`.
-- [x] Создать базовую структуру папок: `/src`, `/src/api`, `/src/services`, `/src/config`.
-- [x] Настроить базовый Express-сервер в `src/server.ts` и `src/app.ts`.
-- [x] Добавить скрипт для запуска в режиме разработки в `package.json` (например, `"dev": "ts-node-dev ... | pino-pretty"`).
+- [x] Initialize `npm` project (`npm init`).
+- [x] Install and configure **TypeScript** (`tsconfig.json`).
+- [x] Install core dependencies: `express`, `cors`, `dotenv`, `pino`.
+- [x] Install dev dependencies: `@types/node`, `@types/express`, `ts-node-dev`, `pino-pretty`.
+- [x] Create a base folder structure: `/src`, `/src/api`, `/src/services`, `/src/config`.
+- [x] Set up a basic Express server in `src/server.ts` and `src/app.ts`.
+- [x] Add a script for running in development mode to `package.json` (e.g., `"dev": "ts-node-dev ... | pino-pretty"`).
 
-### ☐ Этап 2: Настройка базы данных с Prisma
+### ☐ Stage 2: Database Setup with Prisma
 
-- [x] Запустить **PostgreSQL** локально (рекомендуется через Docker).
-- [x] Установить Prisma: `prisma`, `@prisma/client`.
-- [x] Инициализировать Prisma (`npx prisma init`).
-- [x] Настроить подключение к PostgreSQL в `.env` файле.
-- [x] Создать схему данных в `prisma/schema.prisma`. Необходимые модели:
-  - `User` (для хранения адреса кошелька и информации о пользователе).
-  - `Invoice` (счет на оплату: сумма, статус, связь с `User`).
-- [x] Применить миграцию и сгенерировать Prisma Client (`npx prisma migrate dev`).
+- [x] Run **PostgreSQL** locally (recommended via Docker).
+- [x] Install Prisma: `prisma`, `@prisma/client`.
+- [x] Initialize Prisma (`npx prisma init`).
+- [x] Configure the PostgreSQL connection in the `.env` file.
+- [x] Create the data schema in `prisma/schema.prisma`. Required models:
+  - `User` (to store wallet address and user information).
+  - `Invoice` (for payment details: amount, status, linked to `User`).
+- [x] Apply migrations and generate Prisma Client (`npx prisma migrate dev`).
 
-### ☑ Этап 3: Реализация потока аутентификации (`ton_proof`)
+### ☑ Stage 3: Implementation of the Authentication Flow (`ton_proof`)
 
-- [x] Установить криптографические зависимости: `@ton/core`, `js-sha256`, `@tonconnect/sdk`.
-- [x] Реализовать `AuthService` для stateless-аутентификации по стандарту `ton_proof`.
-  - [x] Генерация `challenge` без сохранения состояния на бэкенде.
-  - [x] Верификация подписи `ton_proof`, включая сложную проверку структуры сообщения, для исправления ошибки "Invalid signature".
-- [x] Создать роуты `POST /api/auth/challenge` и `POST /api/auth/verify`.
-- [x] Роут верификации находит или создает пользователя в БД, сохраняя адрес в user-friendly формате.
-- **[x] Обновить интеграционные тесты для потока аутентификации:**
-  - [x] Тестовое окружение настроено для запуска Docker и применения миграций.
-  - [x] Тесты для контроллера (`auth.test.ts`) переписаны с использованием моков для сервисного слоя (`authService`, `userService`).
-  - [x] Написаны тесты, покрывающие:
-    - [x] Успешное получение `challenge`.
-    - [x] Успешную верификацию для нового и существующего пользователя.
-    - [x] Ошибку при невалидной подписи.
-    - [x] Ошибку при отсутствии необходимых полей в запросе.
+- [x] Install cryptographic dependencies: `@ton/core`, `js-sha256`, `@tonconnect/sdk`.
+- [x] Implement `AuthService` for stateless authentication according to the `ton_proof` standard.
+  - [x] Generate a `challenge` without storing state on the backend.
+  - [x] Verify the `ton_proof` signature, including a complex check of the message structure to fix the "Invalid signature" error.
+- [x] Create routes `POST /api/auth/challenge` and `POST /api/auth/verify`.
+- [x] The verification route finds or creates a user in the DB, saving the address in a user-friendly format.
+- **[x] Update integration tests for the authentication flow:**
+  - [x] Test environment configured to run Docker and apply migrations.
+  - [x] Controller tests (`auth.test.ts`) rewritten using mocks for the service layer (`authService`, `userService`).
+  - [x] Tests written to cover:
+    - [x] Successfully obtaining a `challenge`.
+    - [x] Successful verification for new and existing users.
+    - [x] Error on an invalid signature.
+    - [x] Error when required fields are missing in the request.
 
-### ☑ Этап 4: Реализация основного платежного потока
+### ☑ Stage 4: Implementation of the Main Payment Flow
 
-- [x] Создать роут `POST /api/invoices`:
-  - [x] Проверяет, что пользователь аутентифицирован (через проверку наличия `address` в БД).
-  - [x] Создает в БД запись о новом счете со статусом `pending`.
-  - [x] Возвращает `invoiceId`, сумму и **статический адрес кошелька-получателя**.
-- [x] Создать роут `GET /api/invoices/:id` для получения текущего статуса счета.
+- [x] Create route `POST /api/invoices`:
+  - [x] Checks if the user is authenticated (by checking for `address` in the DB).
+  - [x] Creates a new invoice record in the DB with `pending` status.
+  - [x] Returns `invoiceId`, amount, and the **static recipient wallet address**.
+- [x] Create route `GET /api/invoices/:id` to get the current status of an invoice.
 
-### ☐ Этап 5: Интеграция WebSockets для Real-Time обновлений
+### ☐ Stage 5: WebSocket Integration for Real-Time Updates
 
-- [ ] Установить библиотеку `ws`.
-- [ ] Настроить `WebSocket.Server` на тот же порт, что и Express-сервер.
-- [ ] Реализовать логику подписки: когда клиент подключается по WebSocket, он сообщает `invoiceId`, на который хочет подписаться.
-- [ ] Создать сервис, который позволит отправлять сообщения конкретным клиентам по `invoiceId`.
+- [ ] Install the `ws` library.
+- [ ] Configure `WebSocket.Server` on the same port as the Express server.
+- [ ] Implement subscription logic: when a client connects via WebSocket, it sends the `invoiceId` it wants to subscribe to.
+- [ ] Create a service that allows sending messages to specific clients by `invoiceId`.
 
-### ☐ Этап 6: Верификация транзакций в блокчейне
+### ☐ Stage 6: Blockchain Transaction Verification
 
-- [ ] Создать `TonApiService` для взаимодействия с публичным TON API (например, Toncenter). Установить `axios` для HTTP-запросов.
-- [ ] Реализовать фоновый процесс (для начала можно `setInterval`), который:
-  - [ ] Получает из БД все счета со статусом `pending`.
-  - [ ] Для каждого счета делает запрос в TON API, чтобы получить последние транзакции на **кошельке-получателе**.
-  - [ ] Ищет среди транзакций ту, у которой совпадает **сумма** и **комментарий/payload** (например, `invoice_123`).
-- [ ] Когда транзакция найдена и верифицирована:
-  - [ ] Обновить статус счета в PostgreSQL на `completed`.
-  - [ ] Отправить уведомление клиенту через WebSocket.
-  - [ ] Прекратить опрос для этого счета.
+- [ ] Create a `TonApiService` to interact with a public TON API (e.g., Toncenter). Install `axios` for HTTP requests.
+- [ ] Implement a background process (can start with `setInterval`) that:
+  - [ ] Retrieves all invoices with `pending` status from the DB.
+  - [ ] For each invoice, makes a request to the TON API to get the latest transactions for the **recipient's wallet**.
+  - [ ] Searches among the transactions for one that matches the **amount** and **comment/payload** (e.g., `invoice_123`).
+- [ ] When the transaction is found and verified:
+  - [ ] Update the invoice status in PostgreSQL to `completed`.
+  - [ ] Send a notification to the client via WebSocket.
+  - [ ] Stop polling for this invoice.
 
-### ☐ Этап 7: Безопасность и подготовка к развертыванию
+### ☐ Stage 7: Security and Deployment Preparation
 
-- [ ] Убедиться, что все секретные данные (ключи, пароли от БД) используются только через переменные окружения (`.env`).
-- [ ] Добавить валидацию для всех входящих данных (например, с помощью `zod` или `joi`).
-- [ ] Настроить CORS для разрешения запросов только с вашего фронтенд-домена.
-- [ ] (Опционально) Создать `Dockerfile` для контейнеризации бэкенд-приложения.
+- [ ] Ensure all secret data (keys, DB passwords) are used only through environment variables (`.env`).
+- [ ] Add validation for all incoming data (e.g., using `zod` or `joi`).
+- [ ] Configure CORS to allow requests only from your frontend domain.
+- [ ] (Optional) Create a `Dockerfile` for containerizing the backend application.
