@@ -23,6 +23,7 @@ export const getInvoiceById = async (req: Request, res: Response) => {
     if (!invoice) return res.status(404).json({ error: 'Инвойс не найден' });
     res.json({
       ...invoice,
+      recipientAddress: env.RECIPIENT_WALLET_ADDRESS,
       amount: invoice.amount.toFixed(6),
     });
   } catch (error) {
